@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<project name="Ant-Test" default="main" basedir=".">
+	<!-- Sets variables which can later be used. -->
+	<!-- The value of a property is accessed via ${} -->
+	<property name="src.dir" location="src" />
+	<property name="docs.dir" location="docs" />
+
+	<!-- Deletes the existing docs directory-->
+	<target name="clean">
+		<delete dir="${docs.dir}" />
+	</target>
+
+	<!-- Creates the  docs directory-->
+	<target name="makedir">
+		<mkdir dir="${docs.dir}" />
+	</target>
+
+	<!-- Creates Javadoc -->
+	<target name="docs" depends="clean, makedir">
+		<javadoc packagenames="src" sourcepath="${src.dir}" destdir="${docs.dir}">
+			<!-- Define which files / directory should get included, we include all -->
+			<fileset dir="${src.dir}">
+				<include name="**" />
+			</fileset>
+		</javadoc>
+	</target>
+
+	<target name="main" depends="docs">
+		<description>Main target</description>
+	</target>
+
+</project>

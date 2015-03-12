@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<project name="Ant-Test" default="Main" basedir=".">
+	<!-- Sets variables which can later be used. -->
+	<!-- The value of a property is accessed via ${} -->
+	<property name="src.dir" location="src" />
+	<!-- <property name="lib.dir" location="lib" /> -->
+	<property name="build.dir" location="build" />
+	<property name="c.dir" location="c" />
+	<property name="docs.dir" location="docs" />
+	<property name="shared.source.dir" location="docs" />
+	<property name="jdk.path" location="C:/Program Files/Java/jdk1.6.0_24" />
+	<condition property="iswin">
+	    <os family="windows"/>
+	</condition>
+	<ccopts id="shared.opts">
+	  <include location="${shared.source.dir}" />
+	  <sources dir="${c.dir}" include="*.c" />
+	  <define name="_REENTRANT" compiler="gcc" />
+	  <multithreaded />
+	  <rtti />
+	  <exceptions />
+	</ccopts>
+	<!--
+		Create a classpath container which can be later used in the ant task
+	
+	<path id="build.classpath">
+		<fileset dir="${lib.dir}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+	-->
+	
+	<!-- Deletes the existing build directory-->
+	<target name="clean">
+		<delete dir="${build.dir}" />
+		<delete dir="${docs.dir}" />
+	</target>
+
+	<!-- Creates the  build  directory-->
+	<target name="makedir">
+		<mkdir dir="${build.dir}" />
+		<mkdir dir="${docs.dir}" />
+	</target>
+
+	<!-- Compiles the java code -->
+	<target name="compile" depends="clean, makedir">
+		<javac srcdir="${src.dir}" destdir="${build.dir}" /> <!-- classpathref="build.classpath" /> -->
+	</target>
+	
+	<target name="javah">
+		<javah destdir="${c.dir}" classpath="./${build.dir}"> 
+			<class name="me.stec.example.test.Main"/>
+		</javah>
+	</target>
+	<!-- 
+	<target name="cc" description="Incremental build of software suite.">
+	  <cc name="gcc"
+	  	  verbose="true"
+	      outfile="Hello.dll"
+	      outtype="shared">
+	    <fileset dir="./${c.dir}">
+	      <include name="*.c"/>
+	    </fileset>
+	  </cc>
+	</target>
+	 -->
+	<target name="cc" description="Incremental build of software suite.">
+		<cc outtype="shared" subsystem="console" outfile="${c.dir}/Main.dll" objdir="${c.dir}" name="gcc">
+		    <fileset dir="${c.dir}" includes="*.c"/>
+			<!-- <libset dir="${c.dir}" libs="OtherLib"/>  -->
+		    <sysincludepath location="${jdk.path}/include"/>
+		    <sysincludepath location="${jdk.path}/include/win32" if="iswin"/>
+		</cc>
+	</target>
+	<!-- Creates Javadoc -->
+	<target name="docs" depends="compile">
+		<javadoc packagenames="src" sourcepath="${src.dir}" destdir="${docs.dir}">
+			<!-- Define which files / directory should get included, we include all -->
+			<fileset dir="${src.dir}">
+				<include name="**" />
+			</fileset>
+		</javadoc>
+	</target>
+	
+	<target name="Main" depends="compile">
+		<description>Main target</description>
+	</target>
+
+</project>

@@ -1,0 +1,16 @@
+/*
+ * main.c
+ *
+ *  Created on: 12.04.2011
+ *      Author: s2NoiRd_D
+ */
+
+#include <stdio.h>
+
+int main(void){
+	int a=0;
+	a++;
+	printf("Ok! == %d\n", a);
+	a--;
+	return 0;
+}

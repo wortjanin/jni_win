@@ -1,0 +1,29 @@
+package me.stec.example.test;
+
+import me.stec.example.math.*;
+
+/**
+ * Main class
+ * @author s2NoiRd_D
+ *
+ */
+public class Main {
+	/**
+	 * Says hello
+	 */
+	public native void sayHello();
+	static {
+		System.loadLibrary("Main");
+	}
+	/**
+	 * Main function, test {@code main("KEE");}
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		MyMath math = new MyMath();
+		System.out.println("Result is: " + math.multi(5, 10));
+		
+		Main h = new Main();
+		h.sayHello ();
+	}
+}

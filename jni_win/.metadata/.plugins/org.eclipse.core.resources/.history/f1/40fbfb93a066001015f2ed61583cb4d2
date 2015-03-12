@@ -1,0 +1,431 @@
+package me.stec.jni;
+
+import java.util.Arrays;
+
+/**
+ * A simple example on how to use the XCrypt class:
+ * 
+ * <pre>
+ * {@code 
+ * public static void run_test(){
+ *   File in = new File("text_in.txt");
+ *
+ *   XCrypt xCrypt = new XCrypt(XCrypt.XCRY_EALGO_3FISH256);
+ *	 int szBlock = xCrypt.getBlockLen();
+ *	 byte[] inBytes = readBytesFromFile(in);
+ *	 byte[] tweak = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};  
+ *	 byte[] key = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}; 
+ *		
+ *	 // encryption ... 
+ *	 xCrypt.setTweak(tweak);
+ *	 xCrypt.setKey(key);
+ *	 byte[] encryptedBytes = xCrypt.encrypt(inBytes);
+ *	 FileOutputStream fos = new FileOutputStream("text_out.txt");
+ *	 fos.write(encryptedBytes);
+ *		
+ *	 // decryption ... 
+ *	 xCrypt.setTweak(tweak);
+ *	 byte[] outBytes = new byte[inBytes.length];
+ *	 int offsetEnc = 0; // to trace encryptedBytes 
+ *	 int offsetOut = 0;  // to trace outBytes 
+ *	 int[] pOutDataType = new int[1];
+ *	 int[] pOutSzData = new int[1];
+ *	 int[] pOutNdxDataStart = new int[1];
+ *	 while(offsetOut < outBytes.length){
+ *		byte[] pHead = Arrays.copyOfRange(encryptedBytes, offsetEnc, offsetEnc + szBlock);
+ *		offsetEnc += szBlock;
+ *		pHead = xCrypt.decryptHead(pHead, pOutDataType, pOutSzData, pOutNdxDataStart);
+ *		if(null != pHead){ // (pOutNdxDataStart[0] < szBlock) is equivalent condition
+ *			System.arraycopy(pHead, 0, outBytes, offsetOut, pHead.length);
+ *			offsetOut += pHead.length;
+ *		}
+ *		if(pOutSzData[0] > szBlock){
+ *			byte[] pTail = new byte[pOutSzData[0] - szBlock];
+ * 			System.arraycopy(encryptedBytes, offsetEnc, pTail, 0, pTail.length);
+ *			offsetEnc += pTail.length;
+ *			pTail = xCrypt.decryptTail(pTail);
+ *			if(pOutNdxDataStart[0] <= szBlock){ // copy whole decrypted tail
+ *				System.arraycopy(pTail, 0, outBytes, offsetOut, pTail.length);
+ *				offsetOut += pTail.length;
+ *			}
+ *			else{
+ *				System.arraycopy(pTail, pOutNdxDataStart[0] - szBlock, 
+ *						outBytes, offsetOut, pTail.length - (pOutNdxDataStart[0] - szBlock));
+ *				offsetOut += pTail.length - (pOutNdxDataStart[0] - szBlock);
+ *			}
+ *		}
+ *	 }
+ *	 boolean bArraysAreEqual = Arrays.equals(outBytes, inBytes); 
+ *	 assert(bArraysAreEqual);
+ *	 fos = new FileOutputStream("text_out_in.txt");
+ *	 fos.write(outBytes);
+ *	 xCrypt.Close();
+ *	 
+ *	}
+ * 
+ * 	public static byte[] readBytesFromFile(File file) throws IOException {
+ *		byte[] bytes = null;
+ *		InputStream is = new FileInputStream(file);
+ *		long length = file.length();
+ *		if(length > Integer.MAX_VALUE) throw new IOException("Big file");
+ *		int offset = 0;
+ *		try{ 
+ *			int numRead = 0;
+ *			bytes = new byte[(int)length]; 
+ *			// Read in the bytes
+ *			while ( offset < bytes.length && 0 <= ( numRead = is.read(bytes, offset, bytes.length - offset) ) ) 
+ *				offset += numRead;
+ *		       
+ * 			// Ensure all the bytes have been read in
+ *			if ( offset < bytes.length ) {
+ *				throw new IOException("Could not completely read file " + file.getName() 
+ *						+ " offset == " + offset + " startPos == " + 0 + " bytes.length == " + bytes.length);
+ *			}
+ *		}finally{
+ *			// Close the input stream and return bytes
+ *			is.close();
+ *		}
+ *		return bytes;
+ *	}
+ * 
+ * </pre>
+ * 
+ * @author achernoivanov@gmail.com
+ *
+ */
+public class XCrypt {
+	/**
+	 * id for the <a href="http://www.schneier.com/threefish.html">3fish algorithm</a> with the block length of 32 bytes 
+	 */
+	public static final int XCRY_EALGO_3FISH256   = 0;
+	/**
+	 * id for the <a href="http://www.schneier.com/threefish.html">3fish algorithm</a> with the block length of 64 bytes
+	 */
+	public static final int XCRY_EALGO_3FISH512   = 1;
+	/**
+	 * id for the <a href="http://www.schneier.com/threefish.html">3fish algorithm</a> with the block length of 128 bytes
+	 */
+	public static final int XCRY_EALGO_3FISH1024  = 2;
+	/**
+	 * id for encrypted data type (it can be actually any number from 0 to 255 defined by programmer)
+	 */
+	public static final int XCRY_EDATA_TYPE_DATA = 0;
+  
+	private static final XCrypt xCrypt;
+	private XCrypt(){ xcry_ini(); this.szMaxDataChunk = 0; szBlock = 0; szKey = 0; }
+  
+	/**
+	 * Length of the cipher key 
+	 * 
+	 * @param eAlgo id of the algorithm used by the object
+	 * 
+	 * @return Length of the cipher key for algorythm passed
+	 * in case of error returns 0
+	 * 
+	 * @see XCrypt#XCRY_EALGO_3FISH256 
+	 * @see XCrypt#XCRY_EALGO_3FISH512 
+	 * @see XCrypt#XCRY_EALGO_3FISH1024 
+	 * @see ... 
+	 */
+	public static int keyLenOf(int eAlgo){
+		return xCrypt.xcry_cipher_get_algo_keylen(eAlgo);
+	}
+	/**
+	 * Block length for an algorithm 
+	 * 
+	 * @param eAlgo id of algorithm
+	 * 
+	 * @return block length for the algorithm (XCRY_EALGO_3FISH256, ...)
+	 * in case of error returns 0
+	 * 
+	 * @see XCrypt#XCRY_EALGO_3FISH256 
+	 * @see XCrypt#XCRY_EALGO_3FISH512 
+	 * @see XCrypt#XCRY_EALGO_3FISH1024 
+	 * @see ... 
+	 * 
+	 */
+	public static int blkLenOf(int eAlgo){
+		return xCrypt.xcry_cipher_get_algo_blklen(eAlgo);
+	}
+  
+	private final int szBlock;
+	private final int szKey;
+	private int eAlgo;
+	private int szTweak;
+	private int res;
+	private int fd = -1;
+	
+	/**
+	 * Constructor
+	 * @param eAlgo id of the algorithm used by the object
+	 * @throws XCryptException
+	 * @see XCrypt#XCRY_EALGO_3FISH256 
+	 * @see XCrypt#XCRY_EALGO_3FISH512 
+	 * @see XCrypt#XCRY_EALGO_3FISH1024 
+	 */
+	public XCrypt(int eAlgo) throws XCryptException{
+		int[] pFd = new int[]{ -1 };
+		if(0 != (res = xcry_open(pFd, eAlgo)))
+			throw new XCryptException(xcry_error(res));
+		fd = pFd[0];
+		switch(eAlgo){
+		case XCRY_EALGO_3FISH256:
+		case XCRY_EALGO_3FISH512:
+		case XCRY_EALGO_3FISH1024:
+			szTweak = 16;
+			break;
+		default: throw new XCryptException("BUG: unspecified initialization vector length");
+		}
+		this.eAlgo = eAlgo;
+		this.szKey = XCrypt.keyLenOf(eAlgo);
+		this.szBlock = XCrypt.blkLenOf(eAlgo);
+		this.szMaxDataChunk = 65535 - szBlock; /* Do never increase 65535 number (65535 == 2^16 - 1) */
+	}
+	protected void finalize () {
+		Close();
+	}
+	/**
+	 * Closes the object (after which it must NOT be used).
+	 * Close object if you feel necessity to do it explicitly,
+	 * otherwise this job will be done by java in the protected method finalize().
+	 */
+	public void Close(){
+		if(-1 != fd){
+			xcry_close(fd);
+			fd = -1;
+		}
+	}
+	
+	/**
+	 * Length of the initialization vector 
+	 * 
+	 * @return the length of the initialization vector (Tweak in terms of schnier's 3fish algorithm)
+	 */
+	public int getTweakLen(){
+		return szTweak;
+	}
+	
+	/**
+	 * Block length
+	 * 
+	 * @return block length of the algorithm used by object
+	 */
+	public int getBlockLen(){
+		return szBlock;
+	}
+	
+	/**
+	 * Length of the cipher key
+	 * 
+	 * @return length of the cipher key used by object algorithm
+	 */
+	public int getKeyLen(){
+		return szKey;
+	}
+	
+	/**
+	 * Sets the initialization vector
+	 * 
+	 * @param aTweak the initialization vector (must be of the length equal to getTweakLen())
+	 * 
+	 * @throws XCryptException
+	 * 
+	 * @see {@link XCrypt#getTweakLen()}
+	 */
+	public void setTweak(byte[] aTweak) throws XCryptException{
+		if(0 != (res = xcry_settwk(fd, aTweak)))
+			throw new XCryptException(xcry_error(res));
+	}
+	/**
+	 * On data longer than 1 block size, Tweak is changing, 
+	 * so it can be useful to save the final state of Tweak
+	 * 
+	 * @return an array of length getTweakLen()
+	 * 
+	 * @throws XCryptException
+	 * 
+	 * @see {@link XCrypt#getTweakLen()}
+	 */
+	public byte[] getTweak() throws XCryptException{
+		byte[]  aTweak = new byte[szTweak];
+		if(0 != (res = xcry_gettwk(fd, aTweak)))
+			throw new XCryptException(xcry_error(res));
+		return aTweak;
+	}
+	
+	/**
+	 * Sets the key 
+	 * 
+	 * @param aKey (must be of length equal to keyLenOf(eAlgo) and/or getKeyLength() )
+	 * 
+	 * @throws XCryptException
+	 * 
+	 * @see XCrypt#keyLenOf(int)
+	 * @see XCrypt#getKeyLen()
+	 */
+    public void setKey(byte[] aKey) throws XCryptException{
+    	if(0 != (res = xcry_setkey(fd, aKey)))
+    		throw new XCryptException(xcry_error(res));
+    }
+
+     private void encryptChunk(byte[] pInBuf, byte[][] paOutBuf) throws XCryptException{
+    	byte[] outBuf = paOutBuf[0];
+    	byte[] pOutBuf = new byte[pInBuf.length + XCrypt.blkLenOf(eAlgo)];
+    	int[] pSzOutBuf = new int[]{ -1 };
+    	if(0 != (res = xcry_data_prepare(
+    			XCRY_EDATA_TYPE_DATA, szBlock, pInBuf, pOutBuf, pSzOutBuf)))
+    		throw new XCryptException(xcry_error(res));
+    	pInBuf = Arrays.copyOfRange(pOutBuf, 0, pSzOutBuf[0]);
+    	pOutBuf = new byte[pInBuf.length];
+    	if(0 != (res = xcry_encrypt(fd, pInBuf, pOutBuf)))
+    		throw new XCryptException(xcry_error(res));
+    	if(null == outBuf || 0 == outBuf.length) outBuf = pOutBuf;
+    	else{
+    		byte[] pBuf = new byte[outBuf.length + pOutBuf.length];
+    		System.arraycopy(outBuf,  0, pBuf, 0,             outBuf.length);
+    		System.arraycopy(pOutBuf, 0, pBuf, outBuf.length, pOutBuf.length);
+    		outBuf = pBuf;
+    	}
+    	paOutBuf[0] = outBuf;
+    }
+    private final int szMaxDataChunk;
+    
+    /**
+     * Encrypts the bytes passed by aInBuf and return the encrypted bytes
+     * before calling this function you must setup key and tweak for the object
+     * Note: the tweak could change while cipher is processing
+     * 
+     * @param aInBuf must be not null with the length > 0
+     * 
+     * @return encrypted bytes
+     * 
+     * @throws XCryptException
+     * 
+     * @see XCrypt#setKey(byte[])
+     * @see XCrypt#setTweak(byte[])
+     */
+    public byte[] encrypt(byte[] aInBuf) throws XCryptException{
+    	if(null == aInBuf || 0 == aInBuf.length) 
+    		throw new XCryptException("Invalid input");
+    	int iCount = aInBuf.length / szMaxDataChunk;
+    	int iTail = aInBuf.length % szMaxDataChunk;
+    	byte[][] ppResult = new byte[][]{null};
+    	int i;
+    	for(i = 0; i < iCount; i+=szMaxDataChunk){
+    		int ndx = i*szMaxDataChunk;
+        	byte[] pInBuf = Arrays.copyOfRange(aInBuf, ndx, ndx + szMaxDataChunk);
+        	encryptChunk(pInBuf, ppResult);
+    	}
+    	if(iTail > 0){
+    		int ndx = i*szMaxDataChunk; 
+    		byte[] pInBuf = Arrays.copyOfRange(aInBuf, ndx, ndx + iTail);
+    		encryptChunk(pInBuf, ppResult);
+    	}
+    	return ppResult[0];
+    }
+    
+    /**
+     * Decrypts the first block passed in aInBuf and returns the decrypted block
+     * Note: if you process data with length > 2^16 - 1 bytes (including the head)
+     * you should repeat decryptHead, decryptTail until the end
+     * 
+     * @param aInBuf first block to be decrypted (length of which must be equal to getBlockLen())
+     * @param pOutDataType an int array of length == 1 used to return the data type (a number from 0 to 255) 
+     * @param pOutSzData an int array of length == 1 used to return the data size (including just processed head) to be processed until next head 
+     * the pOutSzData[0] is a number from getBlockLen() to 2^16 - 1
+     * @param pOutNdxDataStart an int array of length == 1 used to return the data start byte (length to be skipped because of the alignment and meta information data such as data type, checksum of the first block etc)
+     * 
+     * @return decrypted bytes or null if pOutNdxDataStart[0] >= getBlockLen()
+     * 
+     * @throws XCryptException when the first block is damaged or input data is incorrect
+     * 
+	 * @see XCrypt#getKeyLen()
+     */
+    public byte[] decryptHead(
+    		byte[] aInBuf,
+    		int[] pOutDataType,
+    		int[] pOutSzData,
+    		int[] pOutNdxDataStart) throws XCryptException{
+    	if( null == aInBuf || szBlock != aInBuf.length ||
+    		1 != pOutDataType.length || 1 != pOutSzData.length || 1 != pOutNdxDataStart.length) 
+    		throw new XCryptException("Invalid input");
+    	byte[] pOutBuf = new byte[aInBuf.length];
+    	if(0 != (res = xcry_decrypt(fd, aInBuf, pOutBuf)))
+    		throw new XCryptException(xcry_error(res));
+    	if(0 != (res = xcry_data_check_first_block(pOutBuf, szBlock)))
+        		throw new XCryptException(xcry_error(res));
+    	int[] outDataType = new int[1];
+    	int[] outSzData = new int[1];
+    	int[] outNdxDataStart = new int[1];
+    	if(0 != (res = xcry_data_metainfo(pOutBuf, outDataType, outSzData, outNdxDataStart)))
+    		throw new XCryptException(xcry_error(res));
+    	pOutDataType[0] = outDataType[0];
+    	pOutSzData[0] = outSzData[0];
+    	pOutNdxDataStart[0] = outNdxDataStart[0];
+    	byte[] out = null;
+    	if(pOutNdxDataStart[0] < szBlock){
+    		out = new byte[szBlock - pOutNdxDataStart[0]];
+    		System.arraycopy(pOutBuf, pOutNdxDataStart[0], out, 0, out.length);
+    	}
+    	return out;
+    }
+    
+    /**
+     * Decryption of the tail
+     * 
+     * @param aInBuf the encrypted data without the first block (which should be decrypted by the decryptHead method)
+     * fail condition is (null == aInBuf || 0 == aInBuf.length || 0 != aInBuf.length % getBlockLen() ||	(2^16 - 1 - getBlockLen()) < aInBuf.length)
+     * 
+     * @return the decrypted block with the same size as the input one
+     * 
+     * @throws XCryptException
+     */
+    public byte[] decryptTail(byte[] aInBuf) throws XCryptException{
+    	if(null == aInBuf || 0 == aInBuf.length || 0 != aInBuf.length % szBlock ||
+    			szMaxDataChunk < aInBuf.length) 
+    		throw new XCryptException("Invalid input");
+    	byte[] pOutBuf = new byte[aInBuf.length];
+    	if(0 != (res = xcry_decrypt(fd, aInBuf, pOutBuf)))
+    		throw new XCryptException(xcry_error(res));
+    	return pOutBuf;
+    }
+	
+	private native int xcry_cipher_get_algo_keylen(int eAlgo);
+	private native int xcry_cipher_get_algo_blklen(int eAlgo);
+
+	private native String xcry_error(int XCRY_CODE); /* XCRY_CODE == code returned by xcry_open, xcry_close ...; if 0 == XCRY_CODE, everything is 0k. */
+		
+	private native void xcry_ini();
+
+	private native int xcry_open(int[] pFd, int eAlgo);
+	private native int xcry_close(int fd);
+
+			
+	private native int xcry_settwk(int fd, byte[] pTweak);
+	private native int xcry_gettwk(int fd, byte[] pTweak);
+
+			
+	private native int xcry_setkey(int fd, byte[] pKey);
+
+			
+	private native int xcry_encrypt(int fd, byte[] pInBuf, byte[] pOutBuf);
+	private native int xcry_decrypt(int fd, byte[] pInBuf, byte[] pOutBuf);
+
+	/** pInBuf: max len == 2^16 - 1 - szBlock; pOutBuf: max len == 2^16 - 1 */
+	private native int xcry_data_prepare(int eDataType, int szBlock, byte[] pInBuf, byte[] pOutBuf, int[] pSzOutBuf);
+	private native int xcry_data_check_first_block(byte[] pInBuf, int szBlock);
+	private native int xcry_data_metainfo(byte[] pInDecryptedBlock, int[] pOutDataType, int[] pOutSzData, int[] pOutNdxDataStart);
+
+	static {
+		String strOS = System.getProperty("os.name").replace(" ", "_");
+		String strProc = System.getProperty("os.arch");
+
+		if(strOS.toUpperCase().contains("WINDOWS")){
+			System.loadLibrary(XCrypt.class.getName() + "." + strProc);
+		}else{
+			System.loadLibrary(XCrypt.class.getName() + "." + strOS + "." + strProc);
+		}
+		xCrypt = new XCrypt();
+	}
+
+}

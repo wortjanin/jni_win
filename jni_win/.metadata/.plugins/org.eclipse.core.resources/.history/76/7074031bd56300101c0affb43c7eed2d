@@ -1,0 +1,7 @@
+#include <jni.h>
+#include "me_stec_example_test_Main.h"
+
+JNIEXPORT void JNICALL Java_me_stec_example_test_Main_sayHello
+  (JNIEnv *, jobject){
+
+}

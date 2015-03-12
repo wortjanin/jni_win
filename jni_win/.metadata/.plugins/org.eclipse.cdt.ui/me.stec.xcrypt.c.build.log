@@ -1,0 +1,37 @@
+
+**** Build of configuration Debug for project me.stec.xcrypt.c ****
+
+**** Internal Builder is used for build               ****
+gcc -O0 -g3 -Wall -c -fmessage-length=0 -oXCrypt.o ..\XCrypt.c
+..\XCrypt.c:1:18: error: jni.h: No such file or directory
+In file included from ..\XCrypt.c:5:
+..\/XCrypt.h:25: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\/XCrypt.h:33: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\/XCrypt.h:41: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jstring'
+..\/XCrypt.h:49: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'void'
+..\/XCrypt.h:57: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\/XCrypt.h:65: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\/XCrypt.h:73: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\/XCrypt.h:81: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\/XCrypt.h:89: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\/XCrypt.h:97: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\/XCrypt.h:105: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\/XCrypt.h:113: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\/XCrypt.h:121: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\/XCrypt.h:129: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\XCrypt.c:28: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'void'
+..\XCrypt.c:45: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\XCrypt.c:55: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\XCrypt.c:65: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jstring'
+..\XCrypt.c:77: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\XCrypt.c:98: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\XCrypt.c:109: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\XCrypt.c:129: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\XCrypt.c:152: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\XCrypt.c:172: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\XCrypt.c:197: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\XCrypt.c:222: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\XCrypt.c:257: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+..\XCrypt.c:277: error: expected '=', ',', ';', 'asm' or '__attribute__' before 'jint'
+Build error occurred, build is stopped
+Time consumed: 1531  ms.  

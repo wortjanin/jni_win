@@ -1,0 +1,13 @@
+/*
+ * main.c
+ *
+ *  Created on: 09.04.2011
+ *      Author: s2NoiRd_D
+ */
+#include <stdio>
+
+
+int main(void){
+	printf("Starting...");
+	return 0;
+}

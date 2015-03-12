@@ -1,0 +1,13 @@
+/*
+ * main.c
+ *
+ *  Created on: 12.04.2011
+ *      Author: s2NoiRd_D
+ */
+
+#include <stdio.h>
+
+int main(void){
+	printf("Ok!\n");
+	return 0;
+}

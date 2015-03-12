@@ -1,0 +1,10 @@
+package demolib;
+
+public class DemoLib {
+	public static void sayHello(){
+		System.out.println("Hello");
+	}
+	public static void main(String[] args){
+		DemoLib.sayHello();
+	}
+}

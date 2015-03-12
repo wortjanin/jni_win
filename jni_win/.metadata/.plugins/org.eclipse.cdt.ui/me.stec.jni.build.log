@@ -1,0 +1,7 @@
+
+**** Build of configuration Release for project me.stec.jni ****
+
+**** Internal Builder is used for build               ****
+gcc -shared -ome.stec.jni.XCrypt.x86.dll src_c\unitls.o src_c\unidbg.o src_c\stecxcrypt_internal_3fish.o src_c\stecxcrypt.o src_c\me_stec_jni_XCrypt.o
+Build complete for project me.stec.jni
+Time consumed: 2375  ms.  

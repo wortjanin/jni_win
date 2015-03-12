@@ -1,0 +1,13 @@
+/*
+ * XCrypt.c
+ *
+ *  Created on: 10.04.2011
+ *      Author: s2NoiRd_D
+ */
+
+#include <stdio.h>
+
+int main(void){
+	printf("Starting...\n");
+	return 0;
+}

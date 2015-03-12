@@ -1,0 +1,5 @@
+all : Hello.h
+Hello.h : Hello.class
+	javah -jni Hello
+clean :
+	-del Hello.h
